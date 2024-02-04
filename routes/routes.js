@@ -1,11 +1,8 @@
 const express = require('express');
-const db = require('./../util/dbconn');
+const controller = require('./../controllers/controller');
 
 const router = express.Router();
 
-router.get('/', (req, res) => {
-    
-    res.send('Hello World');
-});
+router.get('/snapshot/:id', controller.getSnapshot);
 
 module.exports = router;
