@@ -2,7 +2,8 @@ const db = require("./../util/dbconn");
 
 exports.getSnapshot = async (req, res) => {
   const { id } = req.params;
-  const userid = 4; //hardcoded - needs to be sent through API headers
+  const userid = req.headers.authorization; //user id sent through headers
+  console.log(userid);
 
   const queryEmotions = `SELECT snapshot.snapshot_id, snapshot.user_id, note, date, time, snapshot_emotion_id, emotion, emotion.emotion_id, snapshot_emotion.rating FROM snapshot INNER JOIN snapshot_emotion ON snapshot.snapshot_id = snapshot_emotion.snapshot_id INNER JOIN emotion ON snapshot_emotion.emotion_id = emotion.emotion_id
         WHERE snapshot.snapshot_id = ? AND user_id = ?`;
