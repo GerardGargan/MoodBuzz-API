@@ -2,8 +2,7 @@ const db = require("./../util/dbconn");
 
 exports.getSnapshot = async (req, res) => {
   const { id } = req.params;
-  const userid = req.headers.authorization; //user id sent through headers
-  console.log(userid);
+  const userid = req.headers.userid; //user id sent through headers
 
   const queryEmotions = `SELECT snapshot.snapshot_id, snapshot.user_id, note, date, time, snapshot_emotion_id, emotion, emotion.emotion_id, snapshot_emotion.rating FROM snapshot INNER JOIN snapshot_emotion ON snapshot.snapshot_id = snapshot_emotion.snapshot_id INNER JOIN emotion ON snapshot_emotion.emotion_id = emotion.emotion_id
         WHERE snapshot.snapshot_id = ? AND user_id = ?`;
@@ -37,6 +36,7 @@ exports.getSnapshot = async (req, res) => {
             date: formatDatabaseDate(date),
             time,
             emotions: {},
+            triggers: null
           };
         }
         groupedData[snapshot_id].emotions[emotion_id] = {
@@ -62,10 +62,11 @@ exports.getSnapshot = async (req, res) => {
         });
       }
 
-      //get the triggers for the snapshot
+      //get the triggers for the snapshot and add to the data structure
       const triggerQuery = `SELECT trigger_name, icon, triggers.trigger_id, snapshot_trigger_id FROM snapshot_trigger INNER JOIN triggers ON snapshot_trigger.trigger_id = triggers.trigger_id WHERE snapshot_id = ?`;
       const [trigrows, field] = await db.query(triggerQuery, [id]);
       //console.log(trigrows);
+      groupedData[id].triggers = trigrows;
       
       res.status(200);
       res.json({
@@ -85,7 +86,7 @@ exports.getSnapshot = async (req, res) => {
     res.status(500);
     res.json({
       status: "failure",
-      message: `Error making API request: ${error}`,
+      message: `Error making API request: ${err}`,
     });
   }
 };
