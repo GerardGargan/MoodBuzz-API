@@ -63,7 +63,7 @@ exports.getSnapshot = async (req, res) => {
       }
 
       //get the triggers for the snapshot and add to the data structure
-      const triggerQuery = `SELECT trigger_name, icon, triggers.trigger_id, snapshot_trigger_id FROM snapshot_trigger INNER JOIN triggers ON snapshot_trigger.trigger_id = triggers.trigger_id WHERE snapshot_id = ?`;
+      const triggerQuery = `SELECT trigger_name, icon, triggers.trigger_id, snapshot_trigger_id, CASE WHEN snapshot_trigger.snapshot_trigger_id IS NOT NULL THEN true ELSE false END AS selected FROM triggers LEFT JOIN snapshot_trigger ON triggers.trigger_id = snapshot_trigger.trigger_id AND snapshot_trigger.snapshot_id = ?`;
       const [trigrows, field] = await db.query(triggerQuery, [id]);
       //console.log(trigrows);
       groupedData[id].triggers = trigrows;
