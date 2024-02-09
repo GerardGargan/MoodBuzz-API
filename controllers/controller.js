@@ -91,6 +91,53 @@ exports.getSnapshot = async (req, res) => {
   }
 };
 
+exports.deleteSnapshot = async (req, res) => {
+  const { id } = req.params;
+  const userid = req.headers.userid;
+
+  //check the snapshot exists AND that it belongs to the current user logged in - query the database
+  const snapshotQuery = `SELECT * FROM snapshot WHERE snapshot_id = ? AND user_id = ?`;
+  try {
+    const [snapshotRows, fieldData] = await db.query(snapshotQuery, [
+      id,
+      userid,
+    ]);
+  
+    //check that a snapshot has been returned and belongs to the user
+    if (snapshotRows.length > 0) {
+      //snapshot exists and belongs to the user, perform deletion
+      const deleteTriggersQuery = `DELETE FROM snapshot_trigger WHERE snapshot_id = ?`;
+      const deleteEmotionsLogged = `DELETE FROM snapshot_emotion WHERE snapshot_id = ?`;
+      const deleteSnapshotQuery = `DELETE FROM snapshot WHERE snapshot_id = ?`;
+      
+        const [delTrig, fielddata] = await db.query(deleteTriggersQuery, [id]);
+        const [delEmo, fielddata2] = await db.query(deleteEmotionsLogged, [id]);
+        const [delSap, fielddata3] = await db.query(deleteSnapshotQuery, [id]);
+      
+        res.status(200);
+      res.json({
+        status: 'success',
+        message: `Record id ${id} deleted`
+      });
+    }
+    else {
+      res.status(404);
+      res.json({
+        status: 'failure',
+        message: `Invalid id ${id} or does not belong to user`
+      });
+    }
+  }
+  catch(err) {
+    res.status(500);
+    res.json({
+      status: 'failure',
+      message: `Error making API request ${err}`
+    });
+  }
+  
+};
+
 function formatDatabaseDate(date) {
   const databaseDate = new Date(date);
   const year = databaseDate.getFullYear();
