@@ -1,4 +1,4 @@
-const db = require("./../util/dbconn");
+const db = require("../util/dbconn");
 
 exports.getSnapshot = async (req, res) => {
   const { id } = req.params;

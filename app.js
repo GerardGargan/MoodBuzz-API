@@ -1,9 +1,11 @@
 const express = require('express');
 
-const router = require('./routes/routes');
+const snapshot_router = require('./routes/snapshot_routes');
+const user_router = require('./routes/user_routes');
 
 const app = express();
 
-app.use('/', router);
+app.use('/snapshot', snapshot_router);
+app.use('/user', user_router);
 
 module.exports = app;
