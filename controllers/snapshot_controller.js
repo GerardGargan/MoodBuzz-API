@@ -136,7 +136,8 @@ exports.deleteSnapshot = async (req, res) => {
     });
   }
   
-};
+}
+
 
 function formatDatabaseDate(date) {
   const databaseDate = new Date(date);
