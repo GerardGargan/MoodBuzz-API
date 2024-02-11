@@ -63,6 +63,53 @@ exports.postLogin = async (req, res) => {
     }
 }
 
+exports.postRegister = async (req, res) => {
+
+  let { firstname, surname, email, password } = req.body;
+
+  //check if user already exists
+  const vals = [email];
+  const selectSQL = `SELECT user_id FROM user WHERE email_address = ?`;
+
+  try {
+    const [userDetails, fielddata] = await db.query(selectSQL, vals);
+    if (userDetails.length >= 1) {
+      console.log("email already exists, cant complete registration");
+      res.status(409);
+      res.json({
+        status: 'failure',
+        message: `Email already exists`
+      });
+    } else {
+      console.log("User does not already exist");
+      //continue registration - we have validated the data and checked the email doesnt already exist
+
+      //salt and hash password
+      const hashed = await hashPassword(password);
+      console.log(`hashed password ${hashed}`);
+
+      const valsToInsert = [firstname, surname, email, hashed];
+      const insertSQL = `INSERT INTO user (first_name, last_name, email_address, password) VALUES (?, ?, ?, ?)`;
+
+      //insert user to database
+      const [rows, fielddata] = await db.query(insertSQL, valsToInsert);
+      console.log("success");
+
+      res.status(201);
+      res.json({
+        status: 'success',
+        message: `Registration successful`
+      });
+    }
+  } catch (err) {
+    res.status(500);
+    res.json({
+      status: 'failure',
+      message: `Error making API request: ${err}`
+    });
+  }
+}
+
 //takes a plain text password, returns a salted and hashed password using bcrypt
 async function hashPassword(password) {
     try {
