@@ -134,8 +134,62 @@ exports.deleteSnapshot = async (req, res) => {
       status: 'failure',
       message: `Error making API request ${err}`
     });
+  } 
+}
+
+exports.getUserSnapshots = async (req, res) => {
+  const { id } = req.params;
+
+  const selectSnapshots = `SELECT snapshot.snapshot_id, date, time, emotion, emotion.emotion_id, rating FROM snapshot INNER JOIN snapshot_emotion ON snapshot.snapshot_id = snapshot_emotion.snapshot_id INNER JOIN emotion ON snapshot_emotion.emotion_id = emotion.emotion_id WHERE user_id = ?`;
+  try {
+    const [data, fielddata] = await db.query(selectSnapshots, [id]);
+
+    const groupedData = {};
+
+    data.forEach((row) => {
+      //destructure into variables
+      const { snapshot_id, date, time, emotion, emotion_id, rating } = row;
+
+      //check if the snapshot object already exists in the array, if not create the object
+      if (!groupedData[snapshot_id]) {
+        groupedData[snapshot_id] = {
+          snapshot_id,
+          date: formatDatabaseDate(date),
+          time,
+          emotions: [],
+        };
+      }
+      //add the emotion into the emotions array (within the snapshot object), along with the id and rating
+      groupedData[snapshot_id].emotions.push({
+        emotion_id: emotion_id,
+        emotion: emotion,
+        rating: rating,
+      });
+    });
+
+    //transform to an array so we can sort the values
+    var groupedDataArray = Object.values(groupedData);
+
+    //sort the snapshots based on the id, in descending order - so that the most recent is displayed first.
+    const groupedDataSorted = groupedDataArray.sort((a, b) => {
+      return b.snapshot_id - a.snapshot_id;
+    });
+
+    res.status(200);
+    res.json({
+      status: 'success',
+      message: `${groupedDataSorted.length} snapshots returned`,
+      result: groupedDataSorted
+    });
+
+  } 
+  catch (err) {
+    res.status(500);
+    res.json ({
+      status: 'failure',
+      message: `Error making API request ${err}`
+    });
   }
-  
 }
 
 
