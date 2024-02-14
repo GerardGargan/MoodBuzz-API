@@ -192,6 +192,93 @@ exports.getUserSnapshots = async (req, res) => {
   }
 }
 
+exports.processNewSnapshot = async (req, res) => {
+  //Extract data from the URL query params
+  const formData = req.body;
+  const { notes } = req.body;
+
+  //obtain userid from the request headers
+  const userid = req.headers.userid;
+
+  //initialise empty array, we will later loop through each emotion submitted on the form and add to the array
+  const emotionsToInsert = [];
+
+  try {
+    //insert snapshot record first into the snapshot table
+    const snapshotInsert = `INSERT INTO snapshot (user_id, date, time, note) VALUES (?, ?, ?, ?)`;
+    const date = getCurrentDate();
+    const time = getCurrentTime();
+    const snapshotVals = [userid, date, time, notes];
+    const triggersToInsert = Array.isArray(req.body.trigger)
+      ? req.body.trigger
+      : req.body.trigger
+      ? [req.body.trigger]
+      : [];
+    //Ensures triggers are stored in an array so we can later iterate through - as if only one trigger is submitted it does not create an array, it is stored as a string. We have avoided this behaviour.
+    //We have also done a check to ensure we dont create an array with one object of undefined - if no triggers are selected
+    
+    const [snapInsert, fieldData] = await db.query(
+      snapshotInsert,
+      snapshotVals
+    );
+    //store the id of the snapshot - needs to be inserted on each many to many record we insert on the many to many table
+    const snapshotId = snapInsert.insertId;
+    //loop through emotions and values in the req body and insert into array
+    for (const id in formData) {
+      if (
+        //only iterate through emotions - ignore triggers and notes
+        Object.hasOwnProperty.call(formData, id) &&
+        id != "notes" &&
+        id != "trigger"
+      ) {
+        const value = formData[id];
+        // push the data into the array as an object with the snapshot id, emotion id and the value submitted
+        emotionsToInsert.push({ snapshotId, id, value });
+      }
+    }
+
+    //now insert each emotion record in the many to many table snapshot_emotion
+    if (emotionsToInsert.length > 0) {
+      //check first if we have any records to insert
+      const emotionQuery =
+        "INSERT INTO snapshot_emotion (snapshot_id, emotion_id, rating) VALUES ?";
+      const [rows, fielddata] = await db.query(emotionQuery, [
+        emotionsToInsert.map((record) => [
+          record.snapshotId,
+          record.id,
+          record.value,
+        ]),
+      ]);
+    }
+
+    //now insert each trigger in the many to many table snapshot_trigger
+    if (triggersToInsert.length > 0) {
+      console.log(triggersToInsert.length);
+      console.log(triggersToInsert);
+      const triggerQuery = `INSERT INTO snapshot_trigger (snapshot_id, trigger_id) VALUES (?, ?)`;
+      triggersToInsert.forEach(async (trig) => {
+        const vals = [snapshotId, trig];
+        const [data, fielddata] = await db.query(triggerQuery, vals);
+      });
+    }
+
+    //all successful - return json response and status
+    res.status(201);
+    res.json({
+      status: 'success',
+      message: `Snapshot id ${snapshotId} created`,
+      id: `${snapshotId}`
+    });
+  } catch (err) {
+    //server error
+    res.status(500);
+    res.json({
+      status: 'failure',
+      message: `Error making API request: ${err}`
+    });
+  }
+}
+
 
 function formatDatabaseDate(date) {
   const databaseDate = new Date(date);
@@ -200,4 +287,29 @@ function formatDatabaseDate(date) {
   const day = databaseDate.getDate();
 
   return `${day}/${month}/${year}`;
+}
+
+//Get the current date YY/MM/DD in this format for the mysql database insertion
+function getCurrentDate() {
+  let currentDate = new Date();
+
+  let year = currentDate.getFullYear();
+  let month = currentDate.getMonth() + 1; //zero indexed
+  let date = currentDate.getDate();
+
+  let formattedDate = `${year}/${month}/${date}`;
+
+  return `${formattedDate}`;
+}
+
+//Get the current time
+function getCurrentTime() {
+  let currentDate = new Date();
+
+  let hours = currentDate.getHours();
+  let minutes = currentDate.getMinutes();
+  let seconds = currentDate.getSeconds();
+
+  let formattedTime = `${hours}:${minutes}:${seconds}`;
+  return formattedTime;
 }
