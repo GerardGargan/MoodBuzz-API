@@ -192,6 +192,10 @@ exports.getUserSnapshots = async (req, res) => {
   }
 }
 
+exports.postNewSnapshot = (req, res) => {
+  res.send('hello');
+}
+
 
 function formatDatabaseDate(date) {
   const databaseDate = new Date(date);
