@@ -7,5 +7,6 @@ router.get('/user/:id', controller.getUserSnapshots);
 router.get('/:id', controller.getSnapshot);
 router.delete('/:id', controller.deleteSnapshot);
 router.post('/', controller.processNewSnapshot);
+router.patch('/edit/:id', controller.patchEditSnapshot);
 
 module.exports = router;
