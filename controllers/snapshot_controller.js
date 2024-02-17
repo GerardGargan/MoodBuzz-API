@@ -279,6 +279,9 @@ exports.processNewSnapshot = async (req, res) => {
   }
 }
 
+exports.patchEditSnapshot = (req, res) => {
+  res.send('hello');
+}
 
 function formatDatabaseDate(date) {
   const databaseDate = new Date(date);
