@@ -36,7 +36,7 @@ exports.getSnapshot = async (req, res) => {
             date: formatDatabaseDate(date),
             time,
             emotions: {},
-            triggers: null
+            triggers: null,
           };
         }
         groupedData[snapshot_id].emotions[emotion_id] = {
@@ -67,14 +67,13 @@ exports.getSnapshot = async (req, res) => {
       const [trigrows, field] = await db.query(triggerQuery, [id]);
       //console.log(trigrows);
       groupedData[id].triggers = trigrows;
-      
+
       res.status(200);
       res.json({
-        status: 'success',
+        status: "success",
         message: `Snapshot ${id} retrieved`,
-        result: groupedData[id]
+        result: groupedData[id],
       });
-
     } else {
       res.status(404);
       res.json({
@@ -102,40 +101,38 @@ exports.deleteSnapshot = async (req, res) => {
       id,
       userid,
     ]);
-  
+
     //check that a snapshot has been returned and belongs to the user
     if (snapshotRows.length > 0) {
       //snapshot exists and belongs to the user, perform deletion
       const deleteTriggersQuery = `DELETE FROM snapshot_trigger WHERE snapshot_id = ?`;
       const deleteEmotionsLogged = `DELETE FROM snapshot_emotion WHERE snapshot_id = ?`;
       const deleteSnapshotQuery = `DELETE FROM snapshot WHERE snapshot_id = ?`;
-      
-        const [delTrig, fielddata] = await db.query(deleteTriggersQuery, [id]);
-        const [delEmo, fielddata2] = await db.query(deleteEmotionsLogged, [id]);
-        const [delSap, fielddata3] = await db.query(deleteSnapshotQuery, [id]);
-      
-        res.status(200);
+
+      const [delTrig, fielddata] = await db.query(deleteTriggersQuery, [id]);
+      const [delEmo, fielddata2] = await db.query(deleteEmotionsLogged, [id]);
+      const [delSap, fielddata3] = await db.query(deleteSnapshotQuery, [id]);
+
+      res.status(200);
       res.json({
-        status: 'success',
-        message: `Record id ${id} deleted`
+        status: "success",
+        message: `Record id ${id} deleted`,
       });
-    }
-    else {
+    } else {
       res.status(404);
       res.json({
-        status: 'failure',
-        message: `Invalid id ${id} or does not belong to user`
+        status: "failure",
+        message: `Invalid id ${id} or does not belong to user`,
       });
     }
-  }
-  catch(err) {
+  } catch (err) {
     res.status(500);
     res.json({
-      status: 'failure',
-      message: `Error making API request ${err}`
+      status: "failure",
+      message: `Error making API request ${err}`,
     });
-  } 
-}
+  }
+};
 
 exports.getUserSnapshots = async (req, res) => {
   const { id } = req.params;
@@ -177,20 +174,18 @@ exports.getUserSnapshots = async (req, res) => {
 
     res.status(200);
     res.json({
-      status: 'success',
+      status: "success",
       message: `${groupedDataSorted.length} snapshots returned`,
-      result: groupedDataSorted
+      result: groupedDataSorted,
     });
-
-  } 
-  catch (err) {
+  } catch (err) {
     res.status(500);
-    res.json ({
-      status: 'failure',
-      message: `Error making API request ${err}`
+    res.json({
+      status: "failure",
+      message: `Error making API request ${err}`,
     });
   }
-}
+};
 
 exports.processNewSnapshot = async (req, res) => {
   //Extract data from the URL query params
@@ -216,7 +211,7 @@ exports.processNewSnapshot = async (req, res) => {
       : [];
     //Ensures triggers are stored in an array so we can later iterate through - as if only one trigger is submitted it does not create an array, it is stored as a string. We have avoided this behaviour.
     //We have also done a check to ensure we dont create an array with one object of undefined - if no triggers are selected
-    
+
     const [snapInsert, fieldData] = await db.query(
       snapshotInsert,
       snapshotVals
@@ -265,23 +260,96 @@ exports.processNewSnapshot = async (req, res) => {
     //all successful - return json response and status
     res.status(201);
     res.json({
-      status: 'success',
+      status: "success",
       message: `Snapshot id ${snapshotId} created`,
-      id: `${snapshotId}`
+      id: `${snapshotId}`,
     });
   } catch (err) {
     //server error
     res.status(500);
     res.json({
-      status: 'failure',
-      message: `Error making API request: ${err}`
+      status: "failure",
+      message: `Error making API request: ${err}`,
     });
   }
-}
+};
 
-exports.patchEditSnapshot = (req, res) => {
-  res.send('hello');
-}
+exports.patchEditSnapshot = async (req, res) => {
+  //Extract data from the URL (assuming they are in the query parameters)
+  const { id } = req.params;
+  const formData = req.body;
+  const { notes } = req.body;
+  const userid = req.headers.userid;
+
+  console.log(formData);
+
+  //update notes
+  //update triggers (first delete existing)
+  //ignore emotion data
+
+  //Process the form data and prepare it for database insertion
+  const emotionsToInsert = [];
+
+  try {
+    //check snapshot exists
+    const snapshotQuery = `SELECT * FROM snapshot WHERE snapshot_id = ? AND user_id = ?`;
+    const [snapData, fieldData] = await db.query(snapshotQuery, [id, userid]);
+
+    if (snapData.length > 0) {
+      //record exists and belongs to current user
+      //insert snapshot record first
+      const snapshotUpdate = `UPDATE snapshot SET note = ? WHERE snapshot_id = ? AND user_id = ?`;
+      const date = getCurrentDate();
+      const time = getCurrentTime();
+      const snapshotVals = [notes, id, userid];
+      const triggersToInsert = Array.isArray(req.body.trigger)
+        ? req.body.trigger
+        : req.body.trigger
+        ? [req.body.trigger]
+        : [];
+      //Ensures triggers are stored in an array so we can later iterate through - as if only one trigger is submitted it does not create an array, it is stored as a string. We have avoided this behaviour.
+      //We have also done a check to ensure we dont create an array with one object of undefined - if no triggers are selected
+      const [snapUpdate, fieldData2] = await db.query(
+        snapshotUpdate,
+        snapshotVals
+      );
+
+      //delete all existing triggers, we will reinsert the triggers submitted to ensure we dont retain any that may have been deselected
+      const clearTriggers = `DELETE FROM snapshot_trigger WHERE snapshot_id = ?`;
+      const [delTrig, fieldData3] = await db.query(clearTriggers, [id]);
+
+      //now insert each trigger in the many to many table snapshot_trigger that was submitted in the form
+      if (triggersToInsert.length > 0) {
+        console.log(triggersToInsert.length);
+        console.log(triggersToInsert);
+        const triggerQuery = `INSERT INTO snapshot_trigger (snapshot_id, trigger_id) VALUES (?, ?)`;
+        triggersToInsert.forEach(async (trig) => {
+          const vals = [id, trig];
+          const [data, fielddata] = await db.query(triggerQuery, vals);
+        });
+      }
+
+      res.status(201);
+      res.json({
+        status: "success",
+        message: `Record ${id} updated`,
+      });
+      //no shapshots in the database matching the id or belonging to the current logged in user
+    } else {
+      res.status(404);
+      res.json({
+        status: "failure",
+        message: `Snapshot ${id} does not exist or does not belong to logged in user`,
+      });
+    }
+  } catch (err) {
+    res.status(500);
+    res.json({
+      status: "failure",
+      message: `Error making API request: ${err}`,
+    });
+  }
+};
 
 function formatDatabaseDate(date) {
   const databaseDate = new Date(date);
