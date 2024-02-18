@@ -351,6 +351,72 @@ exports.patchEditSnapshot = async (req, res) => {
   }
 };
 
+exports.getAnalytics = async (req, res) => {
+  const { id } = req.params;
+
+  
+  try {
+    //run query to retrieve all snapshot dates for the user
+    const query = `SELECT date FROM snapshot WHERE user_id = ? ORDER BY date ASC`;
+    const [data, fielddata] = await db.query(query, [id]);
+    if(data.length > 0 ) {
+      //we have at least one record, process
+      //set up empty object to hold data
+      const snapshotsPerMonth = {};
+      //create an array of dates
+      const dateArray = data.map(row => row.date);
+      
+      //date to start from (set to the date of the first snapshot record)
+      const startDate = new Date(dateArray[0]);
+      //date to end at (set to the last month of the current year)
+      const endDate = new Date(getCurrentDate()).setMonth(12);
+      //store currentDate which will be updated in the while loop
+      const currentDate = new Date(startDate);
+
+      //populate snapshotsPerMonth and set up months each with an initial value of zero
+      while(currentDate <= endDate) {
+        //format the monthYear - 2024-01
+        const monthYear = `${currentDate.getFullYear()}-${(currentDate.getMonth()+1).toString().padStart(2,'0')}`;
+        //set initial value to 0
+        snapshotsPerMonth[monthYear] = 0;
+        //update the currentDate to the next month and keep looping until we meet endDate
+        currentDate.setMonth(currentDate.getMonth()+1);
+      }
+
+      //loop through each date, update the snapshotsPerMonth object, increment the month by 1
+      dateArray.forEach(date => {
+        //format the date to the correct format i.e. 2024-1
+        const monthYear = `${date.getFullYear()}-${(date.getMonth()+1).toString().padStart(2,'0')}`;
+        //increment the snapshotsPerMonth for that month by 1
+        snapshotsPerMonth[monthYear]++;
+      });
+
+      console.log(snapshotsPerMonth);
+
+
+      res.status(200);
+      res.json({
+        status: 'success',
+        message: `${data.length} snapshots returned`,
+        result: data
+      });
+    } else {
+      res.status(404);
+      res.json({
+        status: 'failure',
+        message: 'No snapshot records found'
+      });
+    }
+  } catch (err) {
+    res.status(500);
+    res.json({
+      status: 'failure',
+      message: `Error making API request: ${err}`
+    });
+  }
+
+}
+
 function formatDatabaseDate(date) {
   const databaseDate = new Date(date);
   const year = databaseDate.getFullYear();

@@ -5,6 +5,7 @@ const router = express.Router();
 
 router.get('/user/:id', controller.getUserSnapshots);
 router.get('/:id', controller.getSnapshot);
+router.get('/analytics/:id', controller.getAnalytics);
 router.delete('/:id', controller.deleteSnapshot);
 router.post('/', controller.processNewSnapshot);
 router.patch('/edit/:id', controller.patchEditSnapshot);
