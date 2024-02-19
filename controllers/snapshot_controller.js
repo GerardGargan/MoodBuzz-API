@@ -351,25 +351,23 @@ exports.patchEditSnapshot = async (req, res) => {
   }
 };
 
-exports.getAnalytics = async (req, res) => {
+exports.getSnapshotsPerMonth = async (req, res) => {
   const { id } = req.params;
 
-  
   try {
     //run query to retrieve all snapshot dates for the user
     const query = `SELECT date FROM snapshot WHERE user_id = ? ORDER BY date ASC`;
     const [data, fielddata] = await db.query(query, [id]);
-    if(data.length > 0 ) {
-      //we have at least one record, process
+
       //set up empty object to hold data
       const snapshotsPerMonth = {};
       //create an array of dates
       const dateArray = data.map(row => row.date);
       
-      //date to start from (set to the date of the first snapshot record)
-      const startDate = new Date(dateArray[0]);
+      //date to start from (set to the first month of the current year)
+      const startDate = new Date(getCurrentDate()).setMonth(0);
       //date to end at (set to the last month of the current year)
-      const endDate = new Date(getCurrentDate()).setMonth(12);
+      const endDate = new Date(getCurrentDate()).setMonth(11);
       //store currentDate which will be updated in the while loop
       const currentDate = new Date(startDate);
 
@@ -391,22 +389,12 @@ exports.getAnalytics = async (req, res) => {
         snapshotsPerMonth[monthYear]++;
       });
 
-      console.log(snapshotsPerMonth);
-
-
       res.status(200);
       res.json({
         status: 'success',
         message: `${data.length} snapshots returned`,
-        result: data
+        result: snapshotsPerMonth
       });
-    } else {
-      res.status(404);
-      res.json({
-        status: 'failure',
-        message: 'No snapshot records found'
-      });
-    }
   } catch (err) {
     res.status(500);
     res.json({
