@@ -402,6 +402,49 @@ exports.getSnapshotsPerMonth = async (req, res) => {
       message: `Error making API request: ${err}`
     });
   }
+}
+
+exports.getSnapshotsByDay = async (req, res) => {
+  //get the user id from the params
+  const { id } = req.params;
+
+  try {
+    //run query to retrieve snapshot dates
+    const query = `SELECT date FROM snapshot WHERE user_id = ?`;
+    const [data, fielddata] = await db.query(query, [id]);
+
+    //set up an array to store the day names (we will use later to convert int from getDay function to the days name)
+    const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    //initialise each day with a zero count
+    const snapshotsPerDay = { 'Sun': 0, 'Mon': 0, 'Tue': 0, 'Wed': 0, 'Thu': 0, 'Fri': 0, 'Sat': 0 };
+
+    //loop through each date record
+    data.forEach(row => {
+      //convert the text to a date object
+      const date = new Date(row.date);
+      //get the day (int value, 0 = sunday, 1 = monday...)
+      const day = date.getDay();
+      //get the day name by using the array set up earlier
+      const dayName = weekdays[day];
+      //increment the value of that day name by 1
+      snapshotsPerDay[dayName]++;
+    });
+
+    //send json data
+    res.status(200);
+    res.json({
+      status: 'success',
+      message: `${data.length} records summarised into weekday counts for userid ${id}`,
+      result: snapshotsPerDay
+    });
+
+  } catch(err) {
+    res.status(500);
+    res.json({
+      status: 'failure',
+      message: `Failure making API call: ${err}`
+    });
+  }
 
 }
 
