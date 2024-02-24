@@ -351,6 +351,103 @@ exports.patchEditSnapshot = async (req, res) => {
   }
 };
 
+exports.getSnapshotsPerMonth = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    //run query to retrieve all snapshot dates for the user
+    const query = `SELECT date FROM snapshot WHERE user_id = ? ORDER BY date ASC`;
+    const [data, fielddata] = await db.query(query, [id]);
+
+      //set up empty object to hold data
+      const snapshotsPerMonth = {};
+      //create an array of dates
+      const dateArray = data.map(row => row.date);
+      
+      //date to start from (set to the first month of the current year)
+      const startDate = new Date(getCurrentDate()).setMonth(0);
+      //date to end at (set to the last month of the current year)
+      const endDate = new Date(getCurrentDate()).setMonth(11);
+      //store currentDate which will be updated in the while loop
+      const currentDate = new Date(startDate);
+
+      //populate snapshotsPerMonth and set up months each with an initial value of zero
+      while(currentDate <= endDate) {
+        //format the monthYear - 2024-01
+        const monthYear = `${currentDate.getFullYear()}-${(currentDate.getMonth()+1).toString().padStart(2,'0')}`;
+        //set initial value to 0
+        snapshotsPerMonth[monthYear] = 0;
+        //update the currentDate to the next month and keep looping until we meet endDate
+        currentDate.setMonth(currentDate.getMonth()+1);
+      }
+
+      //loop through each date, update the snapshotsPerMonth object, increment the month by 1
+      dateArray.forEach(date => {
+        //format the date to the correct format i.e. 2024-1
+        const monthYear = `${date.getFullYear()}-${(date.getMonth()+1).toString().padStart(2,'0')}`;
+        //increment the snapshotsPerMonth for that month by 1
+        snapshotsPerMonth[monthYear]++;
+      });
+
+      res.status(200);
+      res.json({
+        status: 'success',
+        message: `${data.length} snapshots returned`,
+        result: snapshotsPerMonth
+      });
+  } catch (err) {
+    res.status(500);
+    res.json({
+      status: 'failure',
+      message: `Error making API request: ${err}`
+    });
+  }
+}
+
+exports.getSnapshotsByDay = async (req, res) => {
+  //get the user id from the params
+  const { id } = req.params;
+
+  try {
+    //run query to retrieve snapshot dates
+    const query = `SELECT date FROM snapshot WHERE user_id = ?`;
+    const [data, fielddata] = await db.query(query, [id]);
+
+    //set up an array to store the day names (we will use later to convert int from getDay function to the days name)
+    const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    //initialise each day with a zero count
+    const snapshotsPerDay = { 'Sun': 0, 'Mon': 0, 'Tue': 0, 'Wed': 0, 'Thu': 0, 'Fri': 0, 'Sat': 0 };
+
+    //loop through each date record
+    data.forEach(row => {
+      //convert the text to a date object
+      const date = new Date(row.date);
+      //get the day (int value, 0 = sunday, 1 = monday...)
+      const day = date.getDay();
+      //get the day name by using the array set up earlier
+      const dayName = weekdays[day];
+      //increment the value of that day name by 1
+      snapshotsPerDay[dayName]++;
+    });
+
+    //send json data
+    res.status(200);
+    res.json({
+      status: 'success',
+      message: `${data.length} records summarised into weekday counts for userid ${id}`,
+      result: snapshotsPerDay
+    });
+
+  } catch(err) {
+    res.status(500);
+    res.json({
+      status: 'failure',
+      message: `Failure making API call: ${err}`
+    });
+  }
+
+}
+
 function formatDatabaseDate(date) {
   const databaseDate = new Date(date);
   const year = databaseDate.getFullYear();
