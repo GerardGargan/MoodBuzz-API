@@ -3,10 +3,6 @@ const db = require('../util/dbconn');
 //import helper functions from utils
 const { hashPassword, comparePassword } = require('../util/helper_functions');
 
-exports.getUser = (req, res) => {
-    res.send('user route');
-}
-
 exports.postLogin = async (req, res) => {
     //destructure the values into variables
     const { email, password } = req.body;
