@@ -1,4 +1,5 @@
 const db = require("../util/dbconn");
+const { formatDatabaseDate, getCurrentDate, getCurrentTime } = require('../util/helper_functions');
 
 exports.getSnapshot = async (req, res) => {
   const { id } = req.params;
@@ -466,37 +467,3 @@ exports.getSnapshotsByDay = async (req, res) => {
     });
   }
 };
-
-function formatDatabaseDate(date) {
-  const databaseDate = new Date(date);
-  const year = databaseDate.getFullYear();
-  const month = databaseDate.getMonth() + 1; //zero indexed
-  const day = databaseDate.getDate();
-
-  return `${day}/${month}/${year}`;
-}
-
-//Get the current date YY/MM/DD in this format for the mysql database insertion
-function getCurrentDate() {
-  let currentDate = new Date();
-
-  let year = currentDate.getFullYear();
-  let month = currentDate.getMonth() + 1; //zero indexed
-  let date = currentDate.getDate();
-
-  let formattedDate = `${year}/${month}/${date}`;
-
-  return `${formattedDate}`;
-}
-
-//Get the current time
-function getCurrentTime() {
-  let currentDate = new Date();
-
-  let hours = currentDate.getHours();
-  let minutes = currentDate.getMinutes();
-  let seconds = currentDate.getSeconds();
-
-  let formattedTime = `${hours}:${minutes}:${seconds}`;
-  return formattedTime;
-}
