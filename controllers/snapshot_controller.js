@@ -13,10 +13,12 @@ exports.getSnapshot = async (req, res) => {
     const [rows, fielddata] = await db.query(queryEmotions, vals);
 
     if (rows.length > 0) {
-      //snapshot exists, parse the data structure needed
+      //snapshot exists, set up an empty object which we will parse the data into
       const groupedData = {};
 
+      //parse the data into a data structure representing a snapshot
       rows.forEach((row) => {
+        //destructure the information from each row retrieved
         const {
           snapshot_id,
           user_id,
@@ -28,6 +30,8 @@ exports.getSnapshot = async (req, res) => {
           emotion,
           emotion_id,
         } = row;
+
+        //if the current snapshot doesnt exist in the groupedData object, initialise it
         if (!groupedData[snapshot_id]) {
           groupedData[snapshot_id] = {
             snapshot_id,
@@ -39,6 +43,8 @@ exports.getSnapshot = async (req, res) => {
             triggers: null,
           };
         }
+
+        //add each emotion to the snapshot along with correspoding data relating to that emotion
         groupedData[snapshot_id].emotions[emotion_id] = {
           emotion: emotion,
           emotion_id: emotion_id,
@@ -48,7 +54,7 @@ exports.getSnapshot = async (req, res) => {
         };
       });
 
-      //get rating data for each emotion and insert it into the groupedData object, under each emotion as an array of ratings
+      //get rating data for each emotion and insert it into the groupedData object, under each emotion as an array of ratings (Used later for DOM manipulation)
       for (const emotion of Object.values(groupedData[id].emotions)) {
         const vals = [emotion.emotion_id];
         const query = `SELECT rating, emotion.emotion_id, short_desc, long_desc FROM emotion INNER JOIN emotion_rating ON emotion.emotion_id = emotion_rating.emotion_id INNER JOIN rating ON emotion_rating.rating_id = rating.rating_id WHERE emotion.emotion_id = ?`;
@@ -78,7 +84,7 @@ exports.getSnapshot = async (req, res) => {
       res.status(404);
       res.json({
         status: "failure",
-        message: `Invalid snapshot id ${id}`,
+        message: `Invalid snapshot id ${id} or does not belong to user`,
       });
     }
   } catch (err) {
@@ -141,6 +147,7 @@ exports.getUserSnapshots = async (req, res) => {
   try {
     const [data, fielddata] = await db.query(selectSnapshots, [id]);
 
+    //set up empty data structure to hold the information
     const groupedData = {};
 
     data.forEach((row) => {
@@ -359,50 +366,56 @@ exports.getSnapshotsPerMonth = async (req, res) => {
     const query = `SELECT date FROM snapshot WHERE user_id = ? ORDER BY date ASC`;
     const [data, fielddata] = await db.query(query, [id]);
 
-      //set up empty object to hold data
-      const snapshotsPerMonth = {};
-      //create an array of dates
-      const dateArray = data.map(row => row.date);
-      
-      //date to start from (set to the first month of the current year)
-      const startDate = new Date(getCurrentDate()).setMonth(0);
-      //date to end at (set to the last month of the current year)
-      const endDate = new Date(getCurrentDate()).setMonth(11);
-      //store currentDate which will be updated in the while loop
-      const currentDate = new Date(startDate);
+    //set up empty object to hold data
+    const snapshotsPerMonth = {};
+    //create an array of dates
+    const dateArray = data.map((row) => row.date);
 
-      //populate snapshotsPerMonth and set up months each with an initial value of zero
-      while(currentDate <= endDate) {
-        //format the monthYear - 2024-01
-        const monthYear = `${currentDate.getFullYear()}-${(currentDate.getMonth()+1).toString().padStart(2,'0')}`;
-        //set initial value to 0
-        snapshotsPerMonth[monthYear] = 0;
-        //update the currentDate to the next month and keep looping until we meet endDate
-        currentDate.setMonth(currentDate.getMonth()+1);
-      }
+    //date to start from (set to the first month of the current year)
+    const startDate = new Date(getCurrentDate()).setMonth(0);
+    //date to end at (set to the last month of the current year)
+    const endDate = new Date(getCurrentDate()).setMonth(11);
+    //store currentDate which will be updated in the while loop
+    const currentDate = new Date(startDate);
 
-      //loop through each date, update the snapshotsPerMonth object, increment the month by 1
-      dateArray.forEach(date => {
-        //format the date to the correct format i.e. 2024-1
-        const monthYear = `${date.getFullYear()}-${(date.getMonth()+1).toString().padStart(2,'0')}`;
-        //increment the snapshotsPerMonth for that month by 1
-        snapshotsPerMonth[monthYear]++;
-      });
+    //populate snapshotsPerMonth and set up months each with an initial value of zero
+    while (currentDate <= endDate) {
+      //format the monthYear - 2024-01
+      const monthYear = `${currentDate.getFullYear()}-${(
+        currentDate.getMonth() + 1
+      )
+        .toString()
+        .padStart(2, "0")}`;
+      //set initial value to 0
+      snapshotsPerMonth[monthYear] = 0;
+      //update the currentDate to the next month and keep looping until we meet endDate
+      currentDate.setMonth(currentDate.getMonth() + 1);
+    }
 
-      res.status(200);
-      res.json({
-        status: 'success',
-        message: `${data.length} snapshots returned`,
-        result: snapshotsPerMonth
-      });
+    //loop through each date, update the snapshotsPerMonth object, increment the month by 1
+    dateArray.forEach((date) => {
+      //format the date to the correct format i.e. 2024-1
+      const monthYear = `${date.getFullYear()}-${(date.getMonth() + 1)
+        .toString()
+        .padStart(2, "0")}`;
+      //increment the snapshotsPerMonth for that month by 1
+      snapshotsPerMonth[monthYear]++;
+    });
+
+    res.status(200);
+    res.json({
+      status: "success",
+      message: `${data.length} snapshots returned`,
+      result: snapshotsPerMonth,
+    });
   } catch (err) {
     res.status(500);
     res.json({
-      status: 'failure',
-      message: `Error making API request: ${err}`
+      status: "failure",
+      message: `Error making API request: ${err}`,
     });
   }
-}
+};
 
 exports.getSnapshotsByDay = async (req, res) => {
   //get the user id from the params
@@ -416,10 +429,18 @@ exports.getSnapshotsByDay = async (req, res) => {
     //set up an array to store the day names (we will use later to convert int from getDay function to the days name)
     const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     //initialise each day with a zero count
-    const snapshotsPerDay = { 'Sun': 0, 'Mon': 0, 'Tue': 0, 'Wed': 0, 'Thu': 0, 'Fri': 0, 'Sat': 0 };
+    const snapshotsPerDay = {
+      Sun: 0,
+      Mon: 0,
+      Tue: 0,
+      Wed: 0,
+      Thu: 0,
+      Fri: 0,
+      Sat: 0,
+    };
 
     //loop through each date record
-    data.forEach(row => {
+    data.forEach((row) => {
       //convert the text to a date object
       const date = new Date(row.date);
       //get the day (int value, 0 = sunday, 1 = monday...)
@@ -433,20 +454,18 @@ exports.getSnapshotsByDay = async (req, res) => {
     //send json data
     res.status(200);
     res.json({
-      status: 'success',
+      status: "success",
       message: `${data.length} records summarised into weekday counts for userid ${id}`,
-      result: snapshotsPerDay
+      result: snapshotsPerDay,
     });
-
-  } catch(err) {
+  } catch (err) {
     res.status(500);
     res.json({
-      status: 'failure',
-      message: `Failure making API call: ${err}`
+      status: "failure",
+      message: `Failure making API call: ${err}`,
     });
   }
-
-}
+};
 
 function formatDatabaseDate(date) {
   const databaseDate = new Date(date);

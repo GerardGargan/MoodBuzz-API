@@ -1,11 +1,11 @@
-const db = require('../util/dbconn');
+const db = require("../util/dbconn");
 
 exports.getEmotions = async (req, res) => {
-    const selectEmotions = `SELECT emotion.emotion_id, emotion, rating, short_desc, long_desc FROM emotion INNER JOIN emotion_rating ON emotion.emotion_id = emotion_rating.emotion_id INNER JOIN rating ON emotion_rating.rating_id = rating.rating_id`;
-    try {
-        const [emotions, fieldData] = await db.query(selectEmotions);
+  const selectEmotions = `SELECT emotion.emotion_id, emotion, rating, short_desc, long_desc FROM emotion INNER JOIN emotion_rating ON emotion.emotion_id = emotion_rating.emotion_id INNER JOIN rating ON emotion_rating.rating_id = rating.rating_id`;
+  try {
+    const [emotions, fieldData] = await db.query(selectEmotions);
 
-        const groupedData = {};
+    const groupedData = {};
     //parse data into an appropriate structure to pass to the template
     emotions.forEach((row) => {
       //if it doesnt already exist, create the emotion object
@@ -25,16 +25,17 @@ exports.getEmotions = async (req, res) => {
       });
     });
 
-        res.json({
-            status: 'success',
-            message: `Emotion records retrieved`,
-            result: groupedData
-        });
-    } catch (err) {
-        res.status(500);
-        res.json({
-            status: 'failure',
-            message: `Error making API request: ${err}`
-        });
-    }
-}
+    res.status(200);
+    res.json({
+      status: "success",
+      message: `Emotion records retrieved`,
+      result: groupedData,
+    });
+  } catch (err) {
+    res.status(500);
+    res.json({
+      status: "failure",
+      message: `Error making API request: ${err}`,
+    });
+  }
+};
