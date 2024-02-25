@@ -1,5 +1,7 @@
 const db = require('../util/dbconn');
-const bcrypt = require('bcrypt');
+
+//import helper functions from utils
+const { hashPassword, comparePassword } = require('../util/helper_functions');
 
 exports.getUser = (req, res) => {
     res.send('user route');
@@ -110,23 +112,3 @@ exports.postRegister = async (req, res) => {
   }
 }
 
-//takes a plain text password, returns a salted and hashed password using bcrypt
-async function hashPassword(password) {
-    try {
-      const saltRounds = 10;
-      const hashedPassword = await bcrypt.hash(password, saltRounds);
-      return hashedPassword;
-    } catch (err) {
-      throw err;
-    }
-  }
-  
-  //compares a plain text password and a salted/hashed password (bcrypt), returns true if they are a match
-  async function comparePassword(password, hashedPassword) {
-    try {
-      const match = await bcrypt.compare(password, hashedPassword);
-      return match;
-    } catch (err) {
-      throw err;
-    }
-  }

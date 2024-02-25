@@ -5,6 +5,8 @@ exports.getTriggers = async (req, res) => {
 
     try {
         const [triggerData, fieldData] = await db.query(selectTriggers);
+
+        res.status(200);
         res.json({
             status: 'success',
             message: `retrieved ${triggerData.length} trigger records`,
@@ -47,7 +49,7 @@ exports.getTriggerAnalytics = async (req, res) => {
             triggerCounts[`${trigger.trigger_name}`]++;
         });
 
-
+        res.status(200);
         res.json({
             status: 'success',
             message: `${data.length} records returned`,
