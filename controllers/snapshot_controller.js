@@ -144,7 +144,7 @@ exports.deleteSnapshot = async (req, res) => {
 exports.getUserSnapshots = async (req, res) => {
   const { id } = req.params;
 
-  const selectSnapshots = `SELECT snapshot.snapshot_id, date, time, emotion, emotion.emotion_id, rating FROM snapshot INNER JOIN snapshot_emotion ON snapshot.snapshot_id = snapshot_emotion.snapshot_id INNER JOIN emotion ON snapshot_emotion.emotion_id = emotion.emotion_id WHERE user_id = ?`;
+  const selectSnapshots = `SELECT snapshot.snapshot_id, date, time, note, emotion, emotion.emotion_id, rating FROM snapshot INNER JOIN snapshot_emotion ON snapshot.snapshot_id = snapshot_emotion.snapshot_id INNER JOIN emotion ON snapshot_emotion.emotion_id = emotion.emotion_id WHERE user_id = ?`;
   try {
     const [data, fielddata] = await db.query(selectSnapshots, [id]);
 
@@ -153,7 +153,7 @@ exports.getUserSnapshots = async (req, res) => {
 
     data.forEach((row) => {
       //destructure into variables
-      const { snapshot_id, date, time, emotion, emotion_id, rating } = row;
+      const { snapshot_id, date, time, emotion, emotion_id, rating, note } = row;
 
       //check if the snapshot object already exists in the array, if not create the object
       if (!groupedData[snapshot_id]) {
@@ -161,6 +161,7 @@ exports.getUserSnapshots = async (req, res) => {
           snapshot_id,
           date: formatDatabaseDate(date),
           time,
+          note: note,
           emotions: [],
         };
       }
