@@ -468,3 +468,35 @@ exports.getSnapshotsByDay = async (req, res) => {
     });
   }
 };
+
+exports.getEmotionRatings = async (req, res) => {
+  //obtain emotion id
+  const { id } = req.params;
+  //obtain user id
+  const { userid } = req.headers;
+  const vals = [userid, id];
+
+  const query = `SELECT emotion.emotion_id, emotion, rating, date, time FROM snapshot INNER JOIN snapshot_emotion
+  ON snapshot.snapshot_id = snapshot_emotion.snapshot_id INNER JOIN emotion
+  ON snapshot_emotion.emotion_id = emotion.emotion_id WHERE user_id = ? AND emotion.emotion_id = ?`;
+
+  const [data, fielddata] = await db.query(query, vals);
+
+  if(data.length > 0){
+    res.status(200);
+      res.json({
+        status: 'success',
+        message: `${data.length} records retrieved`,
+        result: data
+      });
+  } else {
+    res.status(404);
+    res.json({
+      status: 'failure',
+      message: `No records found`,
+      result: []
+    });
+  }
+
+  
+}
