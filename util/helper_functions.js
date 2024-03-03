@@ -21,6 +21,7 @@ async function hashPassword(password) {
     }
   }
 
+  //format a date returned from a database
   function formatDatabaseDate(date) {
     const databaseDate = new Date(date);
     const year = databaseDate.getFullYear();
@@ -55,7 +56,7 @@ async function hashPassword(password) {
     return formattedTime;
   }
   
-
+  //export helper functions
   module.exports = {
     hashPassword, comparePassword, formatDatabaseDate, getCurrentDate, getCurrentTime
   }

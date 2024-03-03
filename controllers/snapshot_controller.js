@@ -1,18 +1,23 @@
 const db = require("../util/dbconn");
+//import utility custom functions
 const { formatDatabaseDate, getCurrentDate, getCurrentTime } = require('../util/helper_functions');
 
 exports.getSnapshot = async (req, res) => {
+  //get the snapshot id
   const { id } = req.params;
   const userid = req.headers.userid; //user id sent through headers
 
+  //set up query
   const queryEmotions = `SELECT snapshot.snapshot_id, snapshot.user_id, note, date, time, snapshot_emotion_id, emotion, emotion.emotion_id, snapshot_emotion.rating FROM snapshot INNER JOIN snapshot_emotion ON snapshot.snapshot_id = snapshot_emotion.snapshot_id INNER JOIN emotion ON snapshot_emotion.emotion_id = emotion.emotion_id
         WHERE snapshot.snapshot_id = ? AND user_id = ?`;
 
+  //store in an array for the query
   const vals = [id, userid];
 
   try {
     const [rows, fielddata] = await db.query(queryEmotions, vals);
 
+    //check if any rows were returned
     if (rows.length > 0) {
       //snapshot exists, set up an empty object which we will parse the data into
       const groupedData = {};
@@ -75,6 +80,7 @@ exports.getSnapshot = async (req, res) => {
       //console.log(trigrows);
       groupedData[id].triggers = trigrows;
 
+      //send data and 200 status code
       res.status(200);
       res.json({
         status: "success",
@@ -82,6 +88,7 @@ exports.getSnapshot = async (req, res) => {
         result: groupedData[id],
       });
     } else {
+      //no snapshot exists or does not belong to user, send 404 status code and message
       res.status(404);
       res.json({
         status: "failure",
@@ -89,6 +96,7 @@ exports.getSnapshot = async (req, res) => {
       });
     }
   } catch (err) {
+    //server error, send 500 status code and error message
     res.status(500);
     res.json({
       status: "failure",
@@ -98,12 +106,15 @@ exports.getSnapshot = async (req, res) => {
 };
 
 exports.deleteSnapshot = async (req, res) => {
+  //get snapshot id
   const { id } = req.params;
+  //get userid
   const userid = req.headers.userid;
 
   //check the snapshot exists AND that it belongs to the current user logged in - query the database
   const snapshotQuery = `SELECT * FROM snapshot WHERE snapshot_id = ? AND user_id = ?`;
   try {
+    //run the query
     const [snapshotRows, fieldData] = await db.query(snapshotQuery, [
       id,
       userid,
@@ -120,12 +131,14 @@ exports.deleteSnapshot = async (req, res) => {
       const [delEmo, fielddata2] = await db.query(deleteEmotionsLogged, [id]);
       const [delSap, fielddata3] = await db.query(deleteSnapshotQuery, [id]);
 
+      //send 200 status code and success message
       res.status(200);
       res.json({
         status: "success",
         message: `Record id ${id} deleted`,
       });
     } else {
+      //no snapshot found or does not belong to user, send 404 code and message
       res.status(404);
       res.json({
         status: "failure",
@@ -133,6 +146,7 @@ exports.deleteSnapshot = async (req, res) => {
       });
     }
   } catch (err) {
+    //server error, send 500 status code and error message
     res.status(500);
     res.json({
       status: "failure",
@@ -142,17 +156,19 @@ exports.deleteSnapshot = async (req, res) => {
 };
 
 exports.getUserSnapshots = async (req, res) => {
+  //get the user id from params
   const { id } = req.params;
-
+  //set up the query
   const selectSnapshots = `SELECT snapshot.snapshot_id, date, time, note, emotion, emotion.emotion_id, rating FROM snapshot INNER JOIN snapshot_emotion ON snapshot.snapshot_id = snapshot_emotion.snapshot_id INNER JOIN emotion ON snapshot_emotion.emotion_id = emotion.emotion_id WHERE user_id = ?`;
   try {
+    //run the query
     const [data, fielddata] = await db.query(selectSnapshots, [id]);
 
     //set up empty data structure to hold the information
     const groupedData = {};
-
+    //loop through each row returned and process
     data.forEach((row) => {
-      //destructure into variables
+      //destructure data into variables
       const { snapshot_id, date, time, emotion, emotion_id, rating, note } = row;
 
       //check if the snapshot object already exists in the array, if not create the object
@@ -180,7 +196,7 @@ exports.getUserSnapshots = async (req, res) => {
     const groupedDataSorted = groupedDataArray.sort((a, b) => {
       return b.snapshot_id - a.snapshot_id;
     });
-
+    //send the data with a 200 success status
     res.status(200);
     res.json({
       status: "success",
@@ -188,6 +204,7 @@ exports.getUserSnapshots = async (req, res) => {
       result: groupedDataSorted,
     });
   } catch (err) {
+    //server error - send 500 status code and error message
     res.status(500);
     res.json({
       status: "failure",
@@ -284,20 +301,11 @@ exports.processNewSnapshot = async (req, res) => {
 };
 
 exports.patchEditSnapshot = async (req, res) => {
-  //Extract data from the URL (assuming they are in the query parameters)
+  //Extract data from the body and params
   const { id } = req.params;
   const formData = req.body;
   const { notes } = req.body;
   const userid = req.headers.userid;
-
-  console.log(formData);
-
-  //update notes
-  //update triggers (first delete existing)
-  //ignore emotion data
-
-  //Process the form data and prepare it for database insertion
-  const emotionsToInsert = [];
 
   try {
     //check snapshot exists
