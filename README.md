@@ -3,6 +3,8 @@
 This API was developed as part of the CSC7082 Web Development Module at Queens University Belfast.
 It is a requirement for the MoodBuzz-Node Repo and handles all CRUD processes on behalf of the web app.
 
+URL for locally hosted server: http://localhost:3001
+
 ## Table of Contents
 
 1. [Prerequisites](#prerequisites)
