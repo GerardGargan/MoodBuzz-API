@@ -492,8 +492,10 @@ exports.getEmotionRatings = async (req, res) => {
   const { userid } = req.headers;
   const vals = [userid, id];
 
-  const query = `SELECT emotion.emotion_id, emotion, rating, date, time FROM snapshot INNER JOIN snapshot_emotion
-  ON snapshot.snapshot_id = snapshot_emotion.snapshot_id INNER JOIN emotion
+  const query = `SELECT emotion.emotion_id, emotion, rating, date, time FROM snapshot 
+  INNER JOIN snapshot_emotion
+  ON snapshot.snapshot_id = snapshot_emotion.snapshot_id 
+  INNER JOIN emotion
   ON snapshot_emotion.emotion_id = emotion.emotion_id WHERE user_id = ? AND emotion.emotion_id = ?`;
 
   try {
