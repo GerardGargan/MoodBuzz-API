@@ -1,6 +1,10 @@
 const db = require("../util/dbconn");
 //import utility custom functions
-const { formatDatabaseDate, getCurrentDate, getCurrentTime } = require('../util/helper_functions');
+const {
+  formatDatabaseDate,
+  getCurrentDate,
+  getCurrentTime,
+} = require("../util/helper_functions");
 
 exports.getSnapshot = async (req, res) => {
   //get the snapshot id
@@ -159,7 +163,10 @@ exports.getUserSnapshots = async (req, res) => {
   //get the user id from params
   const { id } = req.params;
   //set up the query
-  const selectSnapshots = `SELECT snapshot.snapshot_id, date, time, note, emotion, emotion.emotion_id, rating FROM snapshot INNER JOIN snapshot_emotion ON snapshot.snapshot_id = snapshot_emotion.snapshot_id INNER JOIN emotion ON snapshot_emotion.emotion_id = emotion.emotion_id WHERE user_id = ?`;
+  const selectSnapshots = `SELECT snapshot.snapshot_id, date, time, note, emotion, emotion.emotion_id, rating FROM snapshot 
+  INNER JOIN snapshot_emotion ON snapshot.snapshot_id = snapshot_emotion.snapshot_id 
+  INNER JOIN emotion ON snapshot_emotion.emotion_id = emotion.emotion_id 
+  WHERE user_id = ?`;
   try {
     //run the query
     const [data, fielddata] = await db.query(selectSnapshots, [id]);
@@ -169,7 +176,8 @@ exports.getUserSnapshots = async (req, res) => {
     //loop through each row returned and process
     data.forEach((row) => {
       //destructure data into variables
-      const { snapshot_id, date, time, emotion, emotion_id, rating, note } = row;
+      const { snapshot_id, date, time, emotion, emotion_id, rating, note } =
+        row;
 
       //check if the snapshot object already exists in the array, if not create the object
       if (!groupedData[snapshot_id]) {
@@ -488,23 +496,29 @@ exports.getEmotionRatings = async (req, res) => {
   ON snapshot.snapshot_id = snapshot_emotion.snapshot_id INNER JOIN emotion
   ON snapshot_emotion.emotion_id = emotion.emotion_id WHERE user_id = ? AND emotion.emotion_id = ?`;
 
-  const [data, fielddata] = await db.query(query, vals);
+  try {
+    const [data, fielddata] = await db.query(query, vals);
 
-  if(data.length > 0){
-    res.status(200);
+    if (data.length > 0) {
+      res.status(200);
       res.json({
-        status: 'success',
+        status: "success",
         message: `${data.length} records retrieved`,
-        result: data
+        result: data,
       });
-  } else {
-    res.status(404);
+    } else {
+      res.status(404);
+      res.json({
+        status: "failure",
+        message: `No records found`,
+        result: [],
+      });
+    }
+  } catch (err) {
+    res.status(500);
     res.json({
-      status: 'failure',
-      message: `No records found`,
-      result: []
+      status: "failure",
+      message: `Error making API call: ${err}`,
     });
   }
-
-  
-}
+};
